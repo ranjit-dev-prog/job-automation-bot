@@ -1,0 +1,169 @@
+<h1>Dashboard</h1>
+
+<div class="card status-card" [class.bot-active]="status()?.running && !status()?.paused">
+  @if (status(); as s) {
+    <div class="agent-header">
+      <span class="agent-pill" [class.online]="s.running && !s.paused" [class.paused]="s.paused">
+        <span class="agent-dot"></span>
+        {{ s.running ? (s.paused ? 'AGENT PAUSED' : 'AGENT ONLINE') : 'AGENT OFFLINE' }}
+      </span>
+      @if (s.running) {
+        <span class="agent-current-action">{{ stateLabel() }}</span>
+      }
+    </div>
+
+    @if (s.running) {
+      <div class="agent-stats">
+        <div class="agent-stat">
+          <span class="agent-stat-value">{{ uptimeLabel() }}</span>
+          <span class="agent-stat-label">Uptime</span>
+        </div>
+        <div class="agent-stat">
+          <span class="agent-stat-value">{{ s.jobsScanned }}</span>
+          <span class="agent-stat-label">Jobs scanned</span>
+        </div>
+        <div class="agent-stat">
+          <span class="agent-stat-value">{{ s.newJobsFound }}</span>
+          <span class="agent-stat-label">New jobs</span>
+        </div>
+        <div class="agent-stat">
+          <span class="agent-stat-value">{{ s.applicationsCount }}</span>
+          <span class="agent-stat-label">Applications (session)</span>
+        </div>
+        <div class="agent-stat">
+          <span class="agent-stat-value">{{ s.appliedToday }}</span>
+          <span class="agent-stat-label">Applied today</span>
+        </div>
+      </div>
+
+      @if (isStandby() && nextSearchLabel()) {
+        <div class="standby-card">
+          <span class="standby-icon">◉</span>
+          <strong>Agent in standby</strong>
+          <span>No new jobs found</span>
+          <span>Searching again in {{ nextSearchLabel() }}</span>
+          <span class="standby-tag">24/7 automation active</span>
+        </div>
+      }
+
+      @if (s.platformsLoggedIn.length) {
+        <p class="dim">Logged into: {{ s.platformsLoggedIn.join(', ') }}</p>
+      }
+    }
+
+    @if (s.lastError) {
+      <p class="error-text">Last error: {{ s.lastError }}</p>
+    }
+  } @else {
+    <p class="dim">Loading agent status…</p>
+  }
+</div>
+
+<div class="card progress-card">
+  <h2>Application progress</h2>
+  <div class="progress-grid">
+    <button class="progress-tile" [class.active]="statusFilter() === 'ALL'" (click)="setStatusFilter('ALL')">
+      <span class="progress-number">{{ total }}</span>
+      <span class="progress-label">Total tracked</span>
+    </button>
+    <button class="progress-tile" [class.active]="statusFilter() === 'APPLIED'" (click)="setStatusFilter('APPLIED')">
+      <span class="progress-number applied">{{ count('APPLIED') }}</span>
+      <span class="progress-label">Applied</span>
+    </button>
+    <button class="progress-tile" [class.active]="statusFilter() === 'PENDING'" (click)="setStatusFilter('PENDING')">
+      <span class="progress-number pending">{{ count('PENDING') }}</span>
+      <span class="progress-label">Pending</span>
+    </button>
+    <button class="progress-tile" [class.active]="statusFilter() === 'SKIPPED'" (click)="setStatusFilter('SKIPPED')">
+      <span class="progress-number skipped">{{ count('SKIPPED') }}</span>
+      <span class="progress-label">Skipped</span>
+    </button>
+    <button class="progress-tile" [class.active]="statusFilter() === 'FAILED'" (click)="setStatusFilter('FAILED')">
+      <span class="progress-number failed">{{ count('FAILED') }}</span>
+      <span class="progress-label">Failed</span>
+    </button>
+    <button
+      class="progress-tile"
+      [class.active]="statusFilter() === 'MANUAL_ACTION_REQUIRED'"
+      (click)="setStatusFilter('MANUAL_ACTION_REQUIRED')"
+    >
+      <span class="progress-number manual">{{ count('MANUAL_ACTION_REQUIRED') }}</span>
+      <span class="progress-label">Needs you</span>
+    </button>
+  </div>
+
+  @if (total > 0) {
+    <div class="progress-bar">
+      <div
+        class="segment segment-applied"
+        [style.width.%]="(count('APPLIED') / total) * 100"
+      ></div>
+      <div
+        class="segment segment-pending"
+        [style.width.%]="(count('PENDING') / total) * 100"
+      ></div>
+      <div
+        class="segment segment-skipped"
+        [style.width.%]="(count('SKIPPED') / total) * 100"
+      ></div>
+      <div
+        class="segment segment-failed"
+        [style.width.%]="(count('FAILED') / total) * 100"
+      ></div>
+      <div
+        class="segment segment-manual"
+        [style.width.%]="(count('MANUAL_ACTION_REQUIRED') / total) * 100"
+      ></div>
+    </div>
+  }
+</div>
+
+<div class="card">
+  <div class="table-header">
+    <h2>Recent applications</h2>
+    @if (statusFilter() !== 'ALL') {
+      <button class="btn btn-sm" (click)="setStatusFilter('ALL')">Clear filter ✕</button>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="table-skeleton">
+      <div class="skeleton-line" style="width: 100%"></div>
+      <div class="skeleton-line" style="width: 100%"></div>
+      <div class="skeleton-line" style="width: 100%"></div>
+    </div>
+  } @else if (applications().length === 0) {
+    <p class="dim empty-state">
+      No applications yet. Go to Filters &amp; Auto-Apply to create a filter and start a run.
+    </p>
+  } @else if (filteredApplications.length === 0) {
+    <p class="dim empty-state">No applications with this status.</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>Job title</th>
+          <th>Company</th>
+          <th>Platform</th>
+          <th>Match</th>
+          <th>Status</th>
+          <th>Applied at</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (a of filteredApplications; track a.id) {
+          <tr>
+            <td><a [href]="a.jobUrl" target="_blank" rel="noopener">{{ a.jobTitle }}</a></td>
+            <td>{{ a.company ?? '—' }}</td>
+            <td>{{ a.platform }}</td>
+            <td>{{ a.matchScore != null ? a.matchScore + '%' : '—' }}</td>
+            <td>
+              <span [class]="badgeClass(a.status)" [title]="a.errorMessage ?? ''">{{ a.status }}</span>
+            </td>
+            <td>{{ a.appliedAt ? (a.appliedAt | date: 'short') : '—' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

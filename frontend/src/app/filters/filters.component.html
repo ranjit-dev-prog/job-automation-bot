@@ -1,0 +1,295 @@
+<h1>Filters &amp; Auto-Apply</h1>
+<p class="hint">
+  Each filter defines what to search for and controls the pacing of auto-apply: a minimum delay
+  between applications and a daily cap, so the bot doesn't hammer a platform.
+</p>
+
+<div class="card section" [class.bot-active]="status()?.running">
+  <h2>Your filters</h2>
+
+  @if (loadingFilters()) {
+    <div class="filter-row-skeleton">
+      <div class="skeleton-line" style="width: 45%"></div>
+      <div class="skeleton-line" style="width: 70%"></div>
+    </div>
+    <div class="filter-row-skeleton">
+      <div class="skeleton-line" style="width: 55%"></div>
+      <div class="skeleton-line" style="width: 60%"></div>
+    </div>
+  } @else if (filters().length === 0) {
+    <p class="dim empty-state">No filters yet — create one below to start auto-applying.</p>
+  }
+
+  @for (f of filters(); track f.id) {
+    <div class="filter-row">
+      <div class="filter-info">
+        <strong>{{ f.name }}</strong>
+        <span class="dim">{{ f.keywords }} · {{ f.platforms }}</span>
+        <span class="dim">
+          delay {{ f.delaySeconds }}s · max {{ f.maxApplicationsPerDay }}/day · re-search every
+          {{ f.searchIntervalMinutes }}m
+        </span>
+        @if (f.easyApplyOnly) {
+          <span class="dim">Easy Apply only</span>
+        }
+        @if (f.directApply) {
+          <span class="dim">direct apply (no relevance check)</span>
+        } @else {
+          <span class="dim">min match {{ f.minMatchScore }}%</span>
+        }
+      </div>
+      <div class="filter-actions">
+        <button
+          class="btn btn-primary btn-sm"
+          (click)="start(f)"
+          [disabled]="startingId() === f.id"
+        >
+          {{ startingId() === f.id ? 'Starting…' : 'Start auto-apply' }}
+        </button>
+        <button class="btn btn-danger btn-sm" (click)="remove(f)">Delete</button>
+      </div>
+    </div>
+  }
+
+  <div class="stop-row">
+    <span class="run-state" [class.running]="status()?.running && !status()?.paused">
+      Automation: {{ status()?.running ? (status()?.paused ? 'Paused' : 'Running') : 'Stopped' }}
+    </span>
+
+    @if (status()?.running && !status()?.paused) {
+      <button class="btn btn-sm" (click)="pause()" [disabled]="pausing()">
+        {{ pausing() ? 'Pausing…' : 'Pause' }}
+      </button>
+    }
+    @if (status()?.running && status()?.paused) {
+      <button class="btn btn-primary btn-sm" (click)="resume()" [disabled]="resuming()">
+        {{ resuming() ? 'Resuming…' : 'Resume' }}
+      </button>
+    }
+    <button
+      class="btn btn-danger btn-sm"
+      (click)="stop()"
+      [disabled]="stopping() || !status()?.running"
+    >
+      {{ stopping() ? 'Stopping…' : 'Emergency stop' }}
+    </button>
+  </div>
+
+  @if (status()?.state === 'MANUAL_ACTION_REQUIRED') {
+    <p class="error-text">
+      ⚠ Automation paused itself — it hit a question/CAPTCHA/OTP it can't handle automatically.
+      {{ status()?.lastError }} Fix it (e.g. add the missing Profile field), then click Resume.
+    </p>
+  }
+  @if (status()?.rateLimitedPlatforms?.length) {
+    <p class="error-text">
+      ⚠ Rate-limited on: {{ status()?.rateLimitedPlatforms?.join(', ') }} — paused search on
+      {{ (status()?.rateLimitedPlatforms?.length ?? 0) > 1 ? 'those platforms' : 'that platform' }},
+      continuing on the rest.
+    </p>
+  }
+
+  @if (stopMessage()) {
+    <p class="dim">{{ stopMessage() }}</p>
+  }
+
+  @if (startedPlatforms().length) {
+    <p class="success-text">Logged in and searching on: {{ startedPlatforms().join(', ') }}</p>
+  }
+
+  @if (startError()) {
+    <p class="error-text">{{ startError() }}</p>
+  }
+
+  @if (platformErrorEntries().length) {
+    <div class="platform-errors">
+      @for (entry of platformErrorEntries(); track entry[0]) {
+        <p class="error-text"><strong>{{ entry[0] }}:</strong> {{ entry[1] }}</p>
+      }
+    </div>
+  }
+</div>
+
+<div class="card section">
+  <h2>New filter</h2>
+
+  <div class="field">
+    <label for="name">Filter name</label>
+    <input id="name" type="text" name="name" [(ngModel)]="form.name" />
+  </div>
+
+  <div class="field">
+    <label for="keywords">Keywords</label>
+    <input id="keywords" type="text" name="keywords" [(ngModel)]="form.keywords" />
+  </div>
+
+  <div class="field">
+    <label for="location">Location</label>
+    <input id="location" type="text" name="location" [(ngModel)]="form.location" />
+  </div>
+
+  <div class="field checkbox-field">
+    <label>
+      <input type="checkbox" name="remoteOnly" [(ngModel)]="form.remoteOnly" />
+      Remote only
+    </label>
+  </div>
+
+  <div class="field checkbox-field">
+    <label>
+      <input type="checkbox" name="easyApplyOnly" [(ngModel)]="form.easyApplyOnly" />
+      Easy Apply only
+    </label>
+    <p class="hint">
+      Only search and auto-apply to jobs LinkedIn can submit in-app (no external site). The bot
+      already clicks through "Next" / "Review" / "Continue" automatically until it reaches
+      "Submit application".
+    </p>
+  </div>
+
+  <div class="field checkbox-field">
+    <label>
+      <input type="checkbox" name="directApply" [(ngModel)]="form.directApply" />
+      Direct apply (skip relevance matching)
+    </label>
+    <p class="hint">
+      Apply to every job found with Easy Apply, regardless of fit — no scoring, no "not relevant"
+      skips. Higher volume, no relevance guarantee. (Easy Apply itself is still required — there's
+      no way to auto-submit a job that only offers an external-site application.)
+    </p>
+  </div>
+
+  <div class="field checkbox-field">
+    <label>
+      <input type="checkbox" name="emailOutreachEnabled" [(ngModel)]="form.emailOutreachEnabled" />
+      Auto-draft HR outreach emails
+    </label>
+    <p class="hint">
+      For every job found, draft an email to a best-guess company address (e.g. hr&#64;company.com —
+      not verified) with your resume attached. Drafts land in <strong>Outreach</strong> — nothing
+      sends until you select and approve them there.
+    </p>
+  </div>
+
+  <div class="field checkbox-field">
+    <label>
+      <input type="checkbox" name="connectionOutreachEnabled" [(ngModel)]="form.connectionOutreachEnabled" />
+      Auto-draft connection referral messages
+    </label>
+    <p class="hint">
+      For every job found, look up your 1st-degree LinkedIn connections at that company and draft
+      a referral-ask message to up to 3 of them. Also lands in <strong>Outreach</strong> for
+      approval — nothing is sent to your real connections until you approve it. Sending needs
+      automation running with LinkedIn logged in.
+    </p>
+  </div>
+
+  @if (!form.directApply) {
+    <div class="field">
+      <label for="minMatchScore">Minimum match score (%)</label>
+      <input
+        id="minMatchScore"
+        type="number"
+        name="minMatchScore"
+        min="0"
+        max="100"
+        [(ngModel)]="form.minMatchScore"
+      />
+      <p class="hint">
+        Jobs are scored against your Profile's skills and target roles before the bot applies.
+        Below this score, a job is skipped as "not relevant" instead of applied to.
+      </p>
+    </div>
+  }
+
+  <div class="field">
+    <label>Platforms</label>
+    <div class="checkbox-group">
+      @for (p of platforms; track p) {
+        <label class="checkbox-pill" [class.checked]="form.platforms.includes(p)">
+          <input
+            type="checkbox"
+            [checked]="form.platforms.includes(p)"
+            (change)="togglePlatform(p)"
+          />
+          {{ p }}
+        </label>
+      }
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="delaySeconds">Delay between applications (seconds)</label>
+    <input
+      id="delaySeconds"
+      type="number"
+      name="delaySeconds"
+      min="1"
+      [(ngModel)]="form.delaySeconds"
+    />
+    <p class="hint">Lower = faster through the queue, but looks more scripted to the platform. 1s is maximum speed — real account-flag risk.</p>
+  </div>
+
+  <div class="field">
+    <label for="searchIntervalMinutes">Re-search interval (once the queue runs dry)</label>
+    <select id="searchIntervalMinutes" name="searchIntervalMinutes" [(ngModel)]="form.searchIntervalMinutes">
+      @for (m of searchIntervalOptions; track m) {
+        <option [ngValue]="m">Every {{ m }} minute{{ m === 1 ? '' : 's' }}</option>
+      }
+    </select>
+    <p class="hint">How often the agent looks for new postings while it's in standby with no pending jobs.</p>
+  </div>
+
+  <div class="field">
+    <label for="maxApplicationsPerDay">Max applications per day</label>
+    <input
+      id="maxApplicationsPerDay"
+      type="number"
+      name="maxApplicationsPerDay"
+      min="1"
+      [(ngModel)]="form.maxApplicationsPerDay"
+    />
+  </div>
+
+  <div class="field">
+    <label for="customRulesJson">Custom rules (optional JSON)</label>
+    <textarea
+      id="customRulesJson"
+      name="customRulesJson"
+      rows="3"
+      placeholder='e.g. {"excludeCompanies": ["Acme"]}'
+      [(ngModel)]="form.customRulesJson"
+    ></textarea>
+  </div>
+
+  @if (error()) {
+    <p class="error-text">{{ error() }}</p>
+  }
+
+  <button class="btn btn-primary" (click)="create()" [disabled]="saving()">
+    {{ saving() ? 'Creating…' : 'Create filter' }}
+  </button>
+</div>
+
+<div class="card section">
+  <h2>Bulk import job roles from CSV</h2>
+  <p class="hint">
+    One filter per role, using the platforms/delay/cap/location settings from "New filter" above.
+    Either a plain list of role names (one per line), or CSV columns <code>name,keywords,location</code>.
+  </p>
+
+  <input type="file" accept=".csv,text/csv" (change)="onCsvSelected($event)" />
+  <button class="btn btn-primary" (click)="importCsv()" [disabled]="!csvFile || csvImporting()">
+    {{ csvImporting() ? 'Importing…' : 'Import CSV' }}
+  </button>
+
+  @if (csvProgress(); as p) {
+    <p class="dim">{{ p.done }} / {{ p.total }}</p>
+  }
+  @if (csvResult()) {
+    <p class="success-text">{{ csvResult() }}</p>
+  }
+  @if (csvError()) {
+    <p class="error-text">{{ csvError() }}</p>
+  }
+</div>

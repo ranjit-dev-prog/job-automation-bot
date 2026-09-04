@@ -1,0 +1,440 @@
+<h1>Outreach</h1>
+<p class="hint">
+  Drafted automatically when a filter has email/connection outreach enabled — nothing here has
+  been sent. Review, then select and send. Emails go to a best-effort guessed address (not a
+  verified one); connection messages go to your real LinkedIn connections.
+</p>
+
+<div class="card section">
+  <div class="section-header">
+    <h2>Email sending (Gmail)</h2>
+    @if (mailStatus()?.connected) {
+      <span class="badge badge-applied">Connected</span>
+    } @else {
+      <span class="badge badge-pending">Not connected</span>
+    }
+  </div>
+
+  @if (mailStatus()?.connected) {
+    <p class="dim">Sending outreach emails as <strong>{{ mailStatus()?.gmailUser }}</strong>.</p>
+    <button class="btn btn-danger btn-sm" [disabled]="removingMailCredential()" (click)="removeMailCredential()">
+      {{ removingMailCredential() ? 'Removing…' : 'Disconnect' }}
+    </button>
+  } @else {
+    <p class="hint">
+      Save a Gmail App Password here to send outreach emails from your own account — no server
+      config editing needed. Requires 2-Step Verification on your Google account; generate one at
+      <code>myaccount.google.com/apppasswords</code>. This is never your real Google password.
+    </p>
+    <div class="field">
+      <label for="mailFormGmailUser">Gmail address</label>
+      <input
+        id="mailFormGmailUser"
+        type="email"
+        [(ngModel)]="mailFormGmailUser"
+        name="mailFormGmailUser"
+        placeholder="you@gmail.com"
+      />
+    </div>
+    <div class="field">
+      <label for="mailFormAppPassword">App Password</label>
+      <input
+        id="mailFormAppPassword"
+        type="password"
+        [(ngModel)]="mailFormAppPassword"
+        name="mailFormAppPassword"
+        placeholder="16-character app password"
+        autocomplete="new-password"
+      />
+    </div>
+    <button class="btn btn-primary btn-sm" [disabled]="savingMailCredential()" (click)="saveMailCredential()">
+      {{ savingMailCredential() ? 'Saving…' : 'Save' }}
+    </button>
+  }
+</div>
+
+<div class="card section">
+  <div class="section-header">
+    <h2>Target companies</h2>
+    <div class="section-actions">
+      <button
+        class="btn btn-sm"
+        [disabled]="unscrapedCompanyCount === 0 || scrapingEmails()"
+        (click)="scrapeEmails()"
+      >
+        {{ scrapingEmails() ? 'Scraping…' : 'Find real emails (' + unscrapedCompanyCount + ' unchecked)' }}
+      </button>
+      <button class="btn btn-primary btn-sm" [disabled]="pendingCompanyCount === 0 || drafting()" (click)="draftAndSendAll()">
+        {{ drafting() ? 'Drafting & sending…' : 'Draft & send all (' + pendingCompanyCount + ' pending)' }}
+      </button>
+      <button
+        class="btn btn-danger btn-sm"
+        [disabled]="targetCompanies().length === 0 || deletingCompanies()"
+        (click)="deleteAllCompanies()"
+      >
+        {{ deletingCompanies() ? 'Deleting…' : 'Delete all' }}
+      </button>
+    </div>
+  </div>
+  <p class="hint">
+    Your own list of companies to email directly — paste one company name per line.
+    <strong>"Draft & send all" scrapes each company's website for a real HR address, drafts, and
+    sends immediately</strong> — falling back to the guessed hr&#64;domain address when nothing is
+    found. This skips the review step: check your list looks right before using it. "Find real
+    emails" runs that same lookup ahead of time, in batches of up to 100, if you'd rather review
+    the real addresses first — hand-edited or previously-drafted companies are always editable
+    below and left untouched by future runs.
+  </p>
+
+  <div class="field">
+    <label for="importText">Paste company names (one per line)</label>
+    <textarea id="importText" rows="4" [(ngModel)]="importText" name="importText" placeholder="Acme Corp&#10;Example Inc&#10;..."></textarea>
+  </div>
+  <button class="btn btn-sm" [disabled]="!importText.trim() || importing()" (click)="importCompanies()">
+    {{ importing() ? 'Importing…' : 'Add to list' }}
+  </button>
+
+  @if (loadingCompanies()) {
+    <div class="skeleton-line" style="width: 100%; margin: 1rem 0 0.5rem"></div>
+    <div class="skeleton-line" style="width: 100%"></div>
+  } @else if (targetCompanies().length > 0) {
+    <div class="company-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of targetCompanies(); track c.id) {
+            <tr>
+              <td>{{ c.companyName }}</td>
+              <td>
+                @if (editingCompanyId === c.id) {
+                  <div class="inline-edit">
+                    <input
+                      type="text"
+                      id="editCompanyEmail-{{ c.id }}"
+                      [(ngModel)]="editCompanyEmail"
+                      name="editCompanyEmail-{{ c.id }}"
+                    />
+                    <button class="btn btn-sm" (click)="saveEditCompanyEmail(c.id)">Save</button>
+                    <button class="btn btn-sm" (click)="cancelEditCompanyEmail()">✕</button>
+                  </div>
+                } @else {
+                  <button class="editable-email" (click)="startEditCompanyEmail(c)" title="Click to edit">
+                    {{ c.email }}
+                  </button>
+                  @if (c.emailSource === 'scraped') {
+                    <span class="badge badge-applied" title="Found on the company's own website">Verified</span>
+                  } @else if (c.emailSource === 'manual') {
+                    <span class="badge badge-applied" title="You entered this address">Manual</span>
+                  } @else if (c.emailSource === 'invalid_domain') {
+                    <span class="badge badge-failed" title="This domain has no mail server at all — sending here will bounce. Fix the email by hand.">Won't deliver</span>
+                  } @else if (c.emailSource === 'not_found') {
+                    <span class="badge badge-pending" title="No email found on their website — still a guess">Guessed</span>
+                  } @else {
+                    <span class="badge badge-pending" title="Not yet checked against their website">Guessed</span>
+                  }
+                }
+              </td>
+              <td>
+                @if (c.draftedAt) {
+                  <span class="badge badge-applied">Drafted</span>
+                } @else {
+                  <span class="badge badge-pending">Pending</span>
+                }
+              </td>
+              <td><button class="btn btn-sm btn-danger" (click)="removeCompany(c)">Delete</button></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <p class="dim empty-state">No target companies yet — paste some names above.</p>
+  }
+</div>
+
+<div class="card section">
+  <div class="section-header">
+    <h2>HR outreach emails</h2>
+    <div class="section-actions">
+      <button class="btn btn-sm" (click)="toggleComposeEmail()">
+        {{ composingEmail() ? 'Cancel' : 'Compose new draft' }}
+      </button>
+      <button
+        class="btn btn-sm"
+        [disabled]="failedEmailCount === 0 || sendingEmails()"
+        (click)="retryAllFailed()"
+      >
+        {{ sendingEmails() ? 'Sending…' : 'Retry all failed (' + failedEmailCount + ')' }}
+      </button>
+      <button
+        class="btn btn-primary btn-sm"
+        [disabled]="selectedEmailIds.size === 0 || sendingEmails()"
+        (click)="sendSelectedEmails()"
+      >
+        {{ sendingEmails() ? 'Sending…' : 'Send selected (' + selectedEmailIds.size + ')' }}
+      </button>
+      <button
+        class="btn btn-danger btn-sm"
+        [disabled]="emails().length === 0 || deletingEmails()"
+        (click)="deleteAllEmails()"
+      >
+        {{ deletingEmails() ? 'Deleting…' : 'Delete all' }}
+      </button>
+    </div>
+  </div>
+
+  @if (composingEmail()) {
+    <div class="edit-field">
+      <label for="newEmailCompany">Company</label>
+      <input id="newEmailCompany" type="text" [(ngModel)]="newEmailCompany" name="newEmailCompany" placeholder="Acme Corp" />
+    </div>
+    <div class="edit-field">
+      <label for="newEmailTo">To</label>
+      <input id="newEmailTo" type="email" [(ngModel)]="newEmailTo" name="newEmailTo" placeholder="hr@acme.com" />
+    </div>
+    <div class="edit-field">
+      <label for="newEmailCc">CC (comma-separated, optional)</label>
+      <input id="newEmailCc" type="text" [(ngModel)]="newEmailCc" name="newEmailCc" placeholder="cto@acme.com, hrmanager@acme.com" />
+    </div>
+    <div class="edit-field">
+      <label for="newEmailSubject">Subject</label>
+      <input id="newEmailSubject" type="text" [(ngModel)]="newEmailSubject" name="newEmailSubject" placeholder="Application for ... at Acme Corp" />
+    </div>
+    <div class="edit-field">
+      <label for="newEmailBody">Body</label>
+      <textarea id="newEmailBody" rows="8" [(ngModel)]="newEmailBody" name="newEmailBody"></textarea>
+    </div>
+    <div class="edit-field checkbox-field">
+      <label>
+        <input type="checkbox" [(ngModel)]="newEmailAttachResume" name="newEmailAttachResume" />
+        Attach resume
+      </label>
+    </div>
+    <div class="edit-actions">
+      <button class="btn btn-primary btn-sm" [disabled]="creatingEmail()" (click)="createNewDraft()">
+        {{ creatingEmail() ? 'Creating…' : 'Create draft' }}
+      </button>
+      <button class="btn btn-sm" (click)="toggleComposeEmail()">Cancel</button>
+    </div>
+  }
+
+  @if (loadingEmails()) {
+    <div class="skeleton-line" style="width: 100%; margin-bottom: 0.5rem"></div>
+    <div class="skeleton-line" style="width: 100%"></div>
+  } @else if (emails().length === 0) {
+    <p class="dim empty-state">No email drafts yet. Enable "Auto-draft HR outreach emails" on a filter.</p>
+  } @else {
+    <div class="filter-tabs">
+      <button class="btn btn-sm" [class.btn-primary]="emailFilter() === 'all'" (click)="setEmailFilter('all')">
+        All ({{ emails().length }})
+      </button>
+      <button class="btn btn-sm" [class.btn-primary]="emailFilter() === 'verified'" (click)="setEmailFilter('verified')">
+        Verified ({{ verifiedEmailCount }})
+      </button>
+      <button class="btn btn-sm" [class.btn-primary]="emailFilter() === 'guessed'" (click)="setEmailFilter('guessed')">
+        Guessed ({{ guessedEmailCount }})
+      </button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>
+            <input type="checkbox" [checked]="allEmailsSelected()" (change)="toggleAllEmails($any($event.target).checked)" />
+          </th>
+          <th>Company</th>
+          <th>To</th>
+          <th>Subject</th>
+          <th>Status</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (e of filteredEmails(); track e.id) {
+          <tr (click)="toggleExpandEmail(e.id)" class="clickable-row">
+            <td (click)="$event.stopPropagation()">
+              <input
+                type="checkbox"
+                [checked]="selectedEmailIds.has(e.id)"
+                [disabled]="e.status !== 'DRAFT' && e.status !== 'FAILED'"
+                (change)="toggleEmail(e.id)"
+              />
+            </td>
+            <td>{{ e.company }}</td>
+            <td>
+              {{ e.toEmail }}
+              @if (isVerifiedSource(e.emailSource)) {
+                <span class="badge badge-applied" [title]="e.emailSource === 'manual' ? 'You entered this address' : 'Found on the company\'s own website'">Verified</span>
+              } @else if (e.emailSource === 'invalid_domain') {
+                <span class="badge badge-failed" title="This domain has no mail server at all — sending here will bounce.">Won't deliver</span>
+              } @else {
+                <span class="badge badge-pending" title="Not confirmed against the company's website">Guessed</span>
+              }
+            </td>
+            <td>{{ e.subject }}</td>
+            <td>
+              <span [class]="badgeClass(e.status)" [title]="e.errorMessage ?? ''">{{ e.status }}</span>
+            </td>
+            <td>{{ e.createdAt | date: 'short' }}</td>
+          </tr>
+          @if (expandedEmailId === e.id) {
+            <tr class="preview-row">
+              <td colspan="6">
+                @if (editingEmailId === e.id) {
+                  <p class="dim">To: {{ e.toEmail }}{{ e.ccEmails ? ' · CC: ' + e.ccEmails : '' }}</p>
+                  <div class="edit-field">
+                    <label for="editSubject-{{ e.id }}">Subject</label>
+                    <input id="editSubject-{{ e.id }}" type="text" [(ngModel)]="editSubject" name="editSubject" />
+                  </div>
+                  <div class="edit-field">
+                    <label for="editBody-{{ e.id }}">Body</label>
+                    <textarea id="editBody-{{ e.id }}" rows="8" [(ngModel)]="editBody" name="editBody"></textarea>
+                  </div>
+                  <div class="edit-actions">
+                    <button class="btn btn-primary btn-sm" [disabled]="savingEdit()" (click)="saveEditEmail(e.id)">
+                      {{ savingEdit() ? 'Saving…' : 'Save' }}
+                    </button>
+                    <button class="btn btn-sm" (click)="cancelEditEmail()">Cancel</button>
+                  </div>
+                } @else {
+                  @if (e.ccEmails) {
+                    <p class="dim">CC: {{ e.ccEmails }}</p>
+                  }
+                  <pre class="preview-body">{{ e.body }}</pre>
+                  @if (e.attachResume) {
+                    <span class="dim">📎 resume attached</span>
+                  }
+                  <div class="edit-actions">
+                    <button class="btn btn-sm" (click)="startEditEmail(e)">Edit</button>
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  }
+</div>
+
+<div class="card section">
+  <div class="section-header">
+    <h2>LinkedIn connection messages</h2>
+    <button
+      class="btn btn-primary btn-sm"
+      [disabled]="selectedConnectionIds.size === 0 || sendingConnections()"
+      (click)="sendSelectedConnections()"
+    >
+      {{ sendingConnections() ? 'Sending…' : 'Send selected (' + selectedConnectionIds.size + ')' }}
+    </button>
+  </div>
+  <p class="hint">Sending requires automation to be running with LinkedIn logged in.</p>
+
+  @if (loadingConnections()) {
+    <div class="skeleton-line" style="width: 100%; margin-bottom: 0.5rem"></div>
+    <div class="skeleton-line" style="width: 100%"></div>
+  } @else if (connectionMessages().length === 0) {
+    <p class="dim empty-state">No connection message drafts yet. Enable "Auto-draft connection referral messages" on a filter.</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>
+            <input
+              type="checkbox"
+              [checked]="allConnectionsSelected()"
+              (change)="toggleAllConnections($any($event.target).checked)"
+            />
+          </th>
+          <th>Connection</th>
+          <th>Company</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of connectionMessages(); track c.id) {
+          <tr (click)="toggleExpandConnection(c.id)" class="clickable-row">
+            <td (click)="$event.stopPropagation()">
+              <input type="checkbox" [checked]="selectedConnectionIds.has(c.id)" (change)="toggleConnection(c.id)" />
+            </td>
+            <td>
+              <a [href]="c.connectionProfileUrl" target="_blank" rel="noopener" (click)="$event.stopPropagation()">{{
+                c.connectionName
+              }}</a>
+            </td>
+            <td>{{ c.company }}</td>
+            <td>{{ c.createdAt | date: 'short' }}</td>
+          </tr>
+          @if (expandedConnectionId === c.id) {
+            <tr class="preview-row">
+              <td colspan="4">
+                @if (editingConnectionId === c.id) {
+                  <div class="edit-field">
+                    <label for="editMessage-{{ c.id }}">Message</label>
+                    <textarea id="editMessage-{{ c.id }}" rows="6" [(ngModel)]="editMessage" name="editMessage"></textarea>
+                  </div>
+                  <div class="edit-actions">
+                    <button class="btn btn-primary btn-sm" [disabled]="savingEdit()" (click)="saveEditConnection(c.id)">
+                      {{ savingEdit() ? 'Saving…' : 'Save' }}
+                    </button>
+                    <button class="btn btn-sm" (click)="cancelEditConnection()">Cancel</button>
+                  </div>
+                } @else {
+                  <pre class="preview-body">{{ c.message }}</pre>
+                  <div class="edit-actions">
+                    <button class="btn btn-sm" (click)="startEditConnection(c)">Edit</button>
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  }
+</div>
+
+<div class="card section">
+  <h2>Send history</h2>
+  <p class="hint">Every send attempt, success or failure — appended here even on retries, so nothing overwrites what actually happened.</p>
+
+  @if (loadingLogs()) {
+    <div class="skeleton-line" style="width: 100%; margin-bottom: 0.5rem"></div>
+    <div class="skeleton-line" style="width: 100%"></div>
+  } @else if (logs().length === 0) {
+    <p class="dim empty-state">No send attempts yet.</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>Channel</th>
+          <th>Recipient</th>
+          <th>Subject</th>
+          <th>Result</th>
+          <th>When</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (l of logs(); track l.id) {
+          <tr [title]="l.errorMessage ?? ''">
+            <td>{{ l.channel === 'EMAIL' ? 'Email' : 'LinkedIn message' }}</td>
+            <td>{{ l.recipient }}</td>
+            <td>{{ l.subject ?? '—' }}</td>
+            <td>
+              <span [class]="'badge ' + (l.result === 'SUCCESS' ? 'badge-applied' : 'badge-failed')">{{
+                l.result
+              }}</span>
+            </td>
+            <td>{{ l.createdAt | date: 'short' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

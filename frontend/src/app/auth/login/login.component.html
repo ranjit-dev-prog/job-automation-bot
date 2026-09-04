@@ -1,0 +1,31 @@
+<div class="auth-page">
+  <form class="card auth-card" (ngSubmit)="submit()">
+    <h1>Welcome back</h1>
+
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" type="email" name="email" [(ngModel)]="email" required />
+    </div>
+
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" type="password" name="password" [(ngModel)]="password" required />
+    </div>
+
+    @if (error()) {
+      <p class="error-text">{{ error() }}</p>
+    }
+
+    <button type="submit" class="btn btn-primary full">Log in</button>
+
+    <div class="divider">or</div>
+
+    <button type="button" class="btn full" (click)="loginWithGoogle()">
+      Continue with Google
+    </button>
+
+    <p class="switch">
+      Don't have an account? <a routerLink="/register">Register</a>
+    </p>
+  </form>
+</div>

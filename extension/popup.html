@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Job Automation Bot</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <h1>Job Automation Bot</h1>
+
+    <section id="loginView" hidden>
+      <p class="hint">Sign in with your job-automation-bot account (same login as the dashboard).</p>
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" />
+      </div>
+      <button id="loginBtn" class="btn btn-primary">Log in</button>
+      <p id="loginError" class="error" hidden></p>
+    </section>
+
+    <section id="mainView" hidden>
+      <div class="status-row">
+        <span id="statusBadge" class="badge">idle</span>
+        <span id="appliedCount" class="dim"></span>
+      </div>
+      <p id="lastError" class="error" hidden></p>
+
+      <div class="actions">
+        <button id="startBtn" class="btn btn-primary">Start</button>
+        <button id="stopBtn" class="btn btn-danger" hidden>Stop</button>
+      </div>
+
+      <a id="dashboardLink" href="#" target="_blank" class="btn btn-link">Open full dashboard</a>
+      <button id="logoutBtn" class="btn btn-link">Log out</button>
+    </section>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

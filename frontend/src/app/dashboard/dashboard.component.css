@@ -1,0 +1,273 @@
+h1 {
+  margin-bottom: 1.5rem;
+}
+
+.status-card {
+  margin-bottom: 1.5rem;
+}
+
+.agent-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.9rem;
+}
+
+.agent-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: var(--surface-2);
+  color: var(--text-dim);
+}
+
+.agent-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--text-dim);
+  display: inline-block;
+}
+
+.agent-pill.online {
+  background: rgba(21, 128, 61, 0.12);
+  color: var(--success);
+}
+
+.agent-pill.online .agent-dot {
+  background: var(--success);
+  animation: bolt-pulse 1.4s ease-in-out infinite;
+}
+
+.agent-pill.paused {
+  background: rgba(180, 83, 9, 0.12);
+  color: var(--warning);
+}
+
+.agent-pill.paused .agent-dot {
+  background: var(--warning);
+}
+
+.agent-current-action {
+  font-size: 0.88rem;
+  color: var(--text-dim);
+}
+
+.agent-stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.agent-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.7rem 0.4rem;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.agent-stat-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.agent-stat-label {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.standby-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 1.25rem;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  margin-bottom: 0.9rem;
+}
+
+.standby-icon {
+  font-size: 1.4rem;
+  color: var(--accent);
+  animation: bolt-pulse 2s ease-in-out infinite;
+}
+
+.standby-card strong {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.standby-tag {
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--accent);
+}
+
+@keyframes bolt-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-pill.online .agent-dot,
+  .standby-icon {
+    animation: none;
+  }
+}
+
+.progress-card {
+  margin-bottom: 1.5rem;
+}
+
+h2 {
+  font-size: 1rem;
+  margin: 0 0 1rem;
+}
+
+.progress-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.progress-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.9rem 0.5rem;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+}
+
+.progress-tile:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(16, 35, 63, 0.1);
+}
+
+.progress-tile:active {
+  transform: translateY(0);
+}
+
+.progress-tile.active {
+  border-color: var(--accent);
+  background: #dfeafb;
+}
+
+.progress-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.progress-number.applied {
+  color: var(--success);
+}
+
+.progress-number.pending {
+  color: var(--warning);
+}
+
+.progress-number.skipped {
+  color: var(--text-dim);
+}
+
+.progress-number.failed {
+  color: var(--danger);
+}
+
+.progress-number.manual {
+  color: var(--warning);
+}
+
+.progress-label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.progress-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.segment-applied {
+  background: var(--success);
+}
+
+.segment-pending {
+  background: var(--warning);
+}
+
+.segment-skipped {
+  background: var(--text-dim);
+}
+
+.segment-failed {
+  background: var(--danger);
+}
+
+.segment-manual {
+  background: var(--warning);
+  opacity: 0.7;
+}
+
+.dim {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.table-header h2 {
+  margin: 0;
+}
+
+.table-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.empty-state {
+  padding: 1.5rem 0;
+  text-align: center;
+}

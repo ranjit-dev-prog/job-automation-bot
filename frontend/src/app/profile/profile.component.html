@@ -1,0 +1,216 @@
+<h1>Profile &amp; Resume</h1>
+
+<div class="card section">
+  <h2>Personal details</h2>
+
+  <div class="field">
+    <label for="fullName">Full name</label>
+    <input id="fullName" type="text" name="fullName" [(ngModel)]="profile.fullName" />
+  </div>
+
+  <div class="field">
+    <label for="phone">Phone</label>
+    <input id="phone" type="text" name="phone" [(ngModel)]="profile.phone" />
+  </div>
+
+  <div class="field">
+    <label for="address">Address</label>
+    <input id="address" type="text" name="address" [(ngModel)]="profile.address" />
+  </div>
+
+  <div class="field">
+    <label for="skills">Skills (comma-separated)</label>
+    <input id="skills" type="text" name="skills" [(ngModel)]="profile.skills" />
+  </div>
+
+  <div class="field">
+    <label for="targetRoles">Target job roles (comma-separated)</label>
+    <input
+      id="targetRoles"
+      type="text"
+      name="targetRoles"
+      placeholder="e.g. Application Support Engineer, Cybersecurity Analyst"
+      [(ngModel)]="profile.targetRoles"
+    />
+    <p class="hint">Used to weight job-relevance scoring — a title match here counts more than a skill match.</p>
+  </div>
+
+  <div class="field">
+    <label for="experienceYears">Total years of experience</label>
+    <input
+      id="experienceYears"
+      type="number"
+      name="experienceYears"
+      min="0"
+      [(ngModel)]="profile.experienceYears"
+    />
+  </div>
+
+  <div class="field">
+    <label for="relevantExperienceYears">Relevant experience (years)</label>
+    <input
+      id="relevantExperienceYears"
+      type="number"
+      name="relevantExperienceYears"
+      min="0"
+      [(ngModel)]="profile.relevantExperienceYears"
+    />
+  </div>
+
+  <div class="field">
+    <label for="education">Education (free text or JSON)</label>
+    <textarea id="education" name="education" rows="3" [(ngModel)]="profile.education"></textarea>
+  </div>
+
+  <button class="btn btn-primary" (click)="save()" [disabled]="saving()">
+    {{ saving() ? 'Saving…' : 'Save details' }}
+  </button>
+  @if (saved()) {
+    <span class="saved-hint">Saved</span>
+  }
+</div>
+
+<div class="card section">
+  <h2>Work details</h2>
+  <p class="hint">
+    Used to answer screening questions automatically. Left blank means the bot will stop and ask
+    you rather than guess.
+  </p>
+
+  <div class="field">
+    <label for="currentCompany">Current company</label>
+    <input id="currentCompany" type="text" name="currentCompany" [(ngModel)]="profile.currentCompany" />
+  </div>
+
+  <div class="field">
+    <label for="currentJobTitle">Current job title</label>
+    <input id="currentJobTitle" type="text" name="currentJobTitle" [(ngModel)]="profile.currentJobTitle" />
+  </div>
+
+  <div class="field">
+    <label for="currentLocation">Current location</label>
+    <input id="currentLocation" type="text" name="currentLocation" [(ngModel)]="profile.currentLocation" />
+  </div>
+
+  <div class="field">
+    <label for="preferredLocation">Preferred location</label>
+    <input id="preferredLocation" type="text" name="preferredLocation" [(ngModel)]="profile.preferredLocation" />
+  </div>
+
+  <div class="field checkbox-field">
+    <label for="willingToRelocate">Willing to relocate</label>
+    <select
+      id="willingToRelocate"
+      name="willingToRelocate"
+      [(ngModel)]="profile.willingToRelocate"
+    >
+      <option [ngValue]="null">Not set — bot will stop and ask</option>
+      <option [ngValue]="true">Yes</option>
+      <option [ngValue]="false">No</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="linkedinUrl">LinkedIn profile URL</label>
+    <input id="linkedinUrl" type="text" name="linkedinUrl" [(ngModel)]="profile.linkedinUrl" />
+  </div>
+
+  <div class="field">
+    <label for="noticePeriodDays">Notice period (days)</label>
+    <input id="noticePeriodDays" type="number" name="noticePeriodDays" min="0" [(ngModel)]="profile.noticePeriodDays" />
+  </div>
+
+  <div class="field">
+    <label for="currentSalary">Current salary (annual)</label>
+    <input id="currentSalary" type="number" name="currentSalary" min="0" [(ngModel)]="profile.currentSalary" />
+  </div>
+
+  <div class="field">
+    <label for="expectedSalary">Expected salary (annual)</label>
+    <input id="expectedSalary" type="number" name="expectedSalary" min="0" [(ngModel)]="profile.expectedSalary" />
+  </div>
+
+  <div class="field">
+    <label for="workAuthorization">Work authorization</label>
+    <input
+      id="workAuthorization"
+      type="text"
+      name="workAuthorization"
+      placeholder="e.g. Authorized to work in India, no sponsorship required"
+      [(ngModel)]="profile.workAuthorization"
+    />
+  </div>
+
+  <button class="btn btn-primary" (click)="save()" [disabled]="saving()">
+    {{ saving() ? 'Saving…' : 'Save details' }}
+  </button>
+  @if (saved()) {
+    <span class="saved-hint">Saved</span>
+  }
+</div>
+
+<div class="card section">
+  <h2>Resume</h2>
+
+  @if (profile.resumeFilename) {
+    <p class="current-resume">Current resume: {{ profile.resumeFilename }}</p>
+  } @else {
+    <p class="current-resume dim">No resume uploaded yet.</p>
+  }
+
+  <input type="file" accept=".pdf,.doc,.docx" (change)="onFileSelected($event)" />
+  <button
+    class="btn btn-primary"
+    (click)="uploadResume()"
+    [disabled]="!selectedFile || uploading()"
+  >
+    {{ uploading() ? 'Uploading…' : 'Upload resume' }}
+  </button>
+
+  @if (uploadError()) {
+    <p class="error-text">{{ uploadError() }}</p>
+  }
+
+  @if (suggestions(); as s) {
+    <div class="suggestions-panel">
+      <h3>Details found in your resume</h3>
+      <p class="hint">
+        Extracted automatically from the uploaded file — review before applying, this is a best
+        effort, not guaranteed accurate.
+      </p>
+      <ul class="suggestion-list">
+        @if (s.fullName) {
+          <li><span>Name</span><span>{{ s.fullName }}</span></li>
+        }
+        @if (s.email) {
+          <li><span>Email found</span><span>{{ s.email }}</span></li>
+        }
+        @if (s.phone) {
+          <li><span>Phone</span><span>{{ s.phone }}</span></li>
+        }
+        @if (s.experienceYears) {
+          <li><span>Experience</span><span>{{ s.experienceYears }} years</span></li>
+        }
+        @if (s.skills) {
+          <li><span>Skills</span><span>{{ s.skills }}</span></li>
+        }
+        @if (s.education) {
+          <li><span>Education</span><span class="pre">{{ s.education }}</span></li>
+        }
+      </ul>
+
+      @if (suggestionsApplied()) {
+        <p class="applied-hint">
+          Applied to the form below — click "Save details" above to keep them.
+        </p>
+      } @else {
+        <div class="suggestion-actions">
+          <button class="btn btn-primary btn-sm" (click)="applySuggestions()">
+            Use these details
+          </button>
+          <button class="btn btn-sm" (click)="dismissSuggestions()">Dismiss</button>
+        </div>
+      }
+    </div>
+  }
+</div>

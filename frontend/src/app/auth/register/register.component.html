@@ -1,0 +1,41 @@
+<div class="auth-page">
+  <form class="card auth-card" (ngSubmit)="submit()">
+    <h1>Create your account</h1>
+
+    <div class="field">
+      <label for="name">Name</label>
+      <input id="name" type="text" name="name" [(ngModel)]="name" required />
+    </div>
+
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" type="email" name="email" [(ngModel)]="email" required />
+    </div>
+
+    <div class="field">
+      <label for="password">Password</label>
+      <input
+        id="password"
+        type="password"
+        name="password"
+        [(ngModel)]="password"
+        minlength="8"
+        required
+      />
+    </div>
+
+    @if (error()) {
+      <p class="error-text">{{ error() }}</p>
+    }
+
+    <button type="submit" class="btn btn-primary full">Register</button>
+
+    <div class="divider">or</div>
+
+    <button type="button" class="btn full" (click)="registerWithGoogle()">
+      Continue with Google
+    </button>
+
+    <p class="switch">Already have an account? <a routerLink="/login">Log in</a></p>
+  </form>
+</div>

@@ -1,0 +1,217 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Platform values (validated in DTOs, not enforced by SQLite): LINKEDIN | NAUKRI | INDEED | HIRIST | CUSTOM
+// Application status values: PENDING | APPLIED | FAILED | SKIPPED | MANUAL_ACTION_REQUIRED
+//   SKIPPED = deliberately not applied (no Easy Apply, below match score, duplicate, excluded company)
+//   MANUAL_ACTION_REQUIRED = bot stopped mid-application because it hit a question/field it can't
+//   answer from stored profile data, or a CAPTCHA/OTP/payment prompt — needs the user to look at it
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String? // null for Google-only accounts
+  googleId     String?  @unique
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile     Profile?
+  credentials PlatformCredential[]
+  filters     JobFilter[]
+  applications Application[]
+  outreachEmails OutreachEmail[]
+  connectionMessages ConnectionMessage[]
+  outreachLogs OutreachLog[]
+  targetCompanies TargetCompany[]
+  mailCredential MailCredential?
+}
+
+model Profile {
+  id              String   @id @default(cuid())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String   @unique
+  fullName        String?
+  phone           String?
+  address         String?
+  skills          String? // comma-separated
+  targetRoles     String? // comma-separated — job titles to prioritize when scoring relevance
+  experienceYears Int?
+  relevantExperienceYears Int?
+  education       String? // JSON string
+  currentCompany  String?
+  currentJobTitle String?
+  currentLocation String?
+  preferredLocation String?
+  linkedinUrl     String?
+  noticePeriodDays Int?
+  currentSalary   Int?
+  expectedSalary  Int?
+  workAuthorization String?
+  willingToRelocate Boolean? // null = not confirmed by the user yet
+  resumeFilename  String?
+  resumePath      String?
+  updatedAt       DateTime @updatedAt
+}
+
+model PlatformCredential {
+  id                 String   @id @default(cuid())
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String
+  platform           String
+  usernameEnc        String
+  passwordEnc        String
+  sessionCookiesEnc  String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([userId, platform])
+}
+
+model JobFilter {
+  id                    String   @id @default(cuid())
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                String
+  name                  String
+  keywords              String
+  location              String?
+  remoteOnly            Boolean  @default(false)
+  easyApplyOnly         Boolean  @default(true)
+  minMatchScore         Int      @default(60) // skip jobs scoring below this % against the user's profile
+  directApply           Boolean  @default(false) // when true, skip relevance scoring entirely — apply to every job with Easy Apply, no minimum match required
+  minSalary             Int?
+  platforms             String // comma-separated: LINKEDIN,NAUKRI,INDEED,HIRIST
+  delaySeconds          Int      @default(45)
+  searchIntervalMinutes Int      @default(5) // how often to re-search once the job queue runs dry — allowed: 1, 5, 10, 15, 30
+  emailOutreachEnabled      Boolean @default(false) // draft an HR-outreach email for every job found — still needs manual "Send" approval
+  connectionOutreachEnabled Boolean @default(false) // draft a referral-ask message to 1st-degree LinkedIn connections at the job's company — still needs manual "Send" approval
+  maxApplicationsPerDay Int      @default(20)
+  customRulesJson       String?
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  applications Application[]
+}
+
+model Application {
+  id           String    @id @default(cuid())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  filter       JobFilter? @relation(fields: [filterId], references: [id], onDelete: SetNull)
+  filterId     String?
+  platform     String
+  jobTitle     String
+  company      String?
+  jobUrl       String
+  status       String    @default("PENDING")
+  matchScore   Int? // 0-100 relevance score against the user's profile skills/target roles
+  appliedAt    DateTime?
+  errorMessage String?
+  createdAt    DateTime  @default(now())
+
+  outreachEmails OutreachEmail[]
+  connectionMessages ConnectionMessage[]
+}
+
+// Outreach status values: DRAFT | SENT | FAILED — nothing sends until the user approves it from
+// the Outreach queue (bulk-select + Send), regardless of how the draft was generated.
+
+model OutreachEmail {
+  id              String         @id @default(cuid())
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  application     Application?   @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  applicationId   String?
+  targetCompany   TargetCompany? @relation(fields: [targetCompanyId], references: [id], onDelete: SetNull)
+  targetCompanyId String?
+  company         String
+  toEmail         String // guessed (e.g. hr@company.com) unless sourced from a TargetCompany with its own email
+  emailSource     String  @default("guessed") // "guessed" | "scraped" | "manual" | "not_found" — see email-scraper.util.ts
+  ccEmails        String? // comma-separated, also guessed (e.g. cto@, techlead@, hrmanager@) — editable, same as toEmail
+  subject         String
+  body            String
+  attachResume    Boolean        @default(true)
+  status          String         @default("DRAFT")
+  errorMessage    String?
+  createdAt       DateTime       @default(now())
+  sentAt          DateTime?
+
+  logs OutreachLog[]
+}
+
+// A user-supplied list of companies to email directly (their own address, not a guess), separate
+// from outreach auto-drafted off found job postings. draftedAt tracks whether an OutreachEmail
+// has already been generated for this row, so "draft all" doesn't create duplicates on rerun.
+model TargetCompany {
+  id             String    @id @default(cuid())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  companyName    String
+  email          String
+  emailSource    String    @default("guessed") // "guessed" | "scraped" | "not_found" — see email-scraper.util.ts
+  contactName    String?
+  roleOfInterest String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  draftedAt      DateTime?
+
+  outreachEmails OutreachEmail[]
+}
+
+model ConnectionMessage {
+  id                   String       @id @default(cuid())
+  user                 User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               String
+  application          Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  applicationId        String?
+  company              String
+  connectionName       String
+  connectionProfileUrl String
+  message              String
+  status               String       @default("DRAFT")
+  errorMessage         String?
+  createdAt            DateTime     @default(now())
+  sentAt               DateTime?
+
+  logs OutreachLog[]
+}
+
+// Append-only audit trail — one row per send ATTEMPT (not per draft), so retries/failures don't
+// overwrite history the way OutreachEmail.status/ConnectionMessage.status do. channel values:
+// EMAIL | LINKEDIN_MESSAGE. result values: SUCCESS | FAILED.
+model OutreachLog {
+  id                  String             @id @default(cuid())
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              String
+  channel             String
+  outreachEmail       OutreachEmail?     @relation(fields: [outreachEmailId], references: [id], onDelete: SetNull)
+  outreachEmailId     String?
+  connectionMessage   ConnectionMessage? @relation(fields: [connectionMessageId], references: [id], onDelete: SetNull)
+  connectionMessageId String?
+  recipient           String // email address, or LinkedIn profile URL
+  subject             String? // email only
+  result              String
+  errorMessage        String?
+  createdAt           DateTime           @default(now())
+}
+
+// Per-user Gmail SMTP credential for outreach sending, saved from the Outreach page instead of
+// backend/.env — same encrypted-at-rest pattern as PlatformCredential. When present, this
+// overrides the .env GMAIL_USER/GMAIL_APP_PASSWORD for that user's sends; falls back to .env
+// otherwise (e.g. no user has configured their own yet).
+model MailCredential {
+  id                  String   @id @default(cuid())
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              String   @unique
+  gmailUser           String
+  gmailAppPasswordEnc String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}

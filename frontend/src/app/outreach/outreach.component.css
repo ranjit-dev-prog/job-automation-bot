@@ -1,0 +1,153 @@
+h1 {
+  margin-bottom: 0.25rem;
+}
+
+.hint {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin-bottom: 1.5rem;
+}
+
+.section {
+  margin-bottom: 1.5rem;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.section-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.dim {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.empty-state {
+  padding: 1.5rem 0;
+  text-align: center;
+}
+
+.clickable-row {
+  cursor: pointer;
+}
+
+.preview-row td {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.preview-body {
+  white-space: pre-wrap;
+  font-family: inherit;
+  margin: 0.5rem 0;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0.5rem 0;
+}
+
+.edit-field label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.edit-field input,
+.edit-field textarea {
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.88rem;
+  resize: vertical;
+}
+
+.edit-field input:focus,
+.edit-field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.company-table-wrap {
+  max-height: 420px;
+  overflow-y: auto;
+  margin-top: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.company-table-wrap table {
+  margin: 0;
+}
+
+.company-table-wrap thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+
+.editable-email {
+  background: none;
+  border: none;
+  padding: 0.15rem 0.3rem;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.editable-email:hover {
+  background: var(--surface-2);
+  color: var(--accent);
+}
+
+.inline-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.inline-edit input {
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.85rem;
+  flex: 1;
+  min-width: 0;
+}

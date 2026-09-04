@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+backend/uploads/resumes/*
+!backend/uploads/resumes/.gitkeep
+.angular/
+*.log
+.claude/
+extension.zip
